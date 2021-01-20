@@ -30,6 +30,8 @@ const check = function(users, userEmail) {
   for(let keys in users){
     if(users[keys].email === userEmail) {
       return true;
+    } else {
+      return false;
     }
   }
 }
@@ -105,8 +107,19 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username)
-  res.redirect("/urls");
+  const email = req.body.email;
+  const password = req.body.password;
+  for(let keys in users){
+    const id = users[keys]
+    if(!check(users, email)) {
+      res.sendStatus(403);
+    } else if(users[keys].password !== password){
+      res.sendStatus(403)
+    } else {
+      res.cookie("user_id", id)
+      res.redirect("/urls");
+    }
+  }
 });
 
 app.post("/logout", (req, res) => {
