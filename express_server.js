@@ -25,6 +25,9 @@ const users = {
     password: "dishwasher-funk"
   }
 };
+const getUsers = function(users, user_id) {
+  return users[user_id];
+}
 
 const generateRandomString = function(length = 6) {
   return Math.random().toString(20).substr(2, length);
@@ -43,12 +46,14 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, username: req.cookies["username"] };
+  const user = getUsers(users, req.cookies["user_id"]);
+  const templateVars = { urls: urlDatabase, user: user };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = { username: req.cookies["username"] };
+  const user = getUsers(users, req.cookies["user_id"]);
+  const templateVars = { user: user };
   res.render("urls_new", templateVars);
 });
 
@@ -58,7 +63,8 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username: req.cookies["username"] };
+  const user = getUsers(users, req.cookies["user_id"]);
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: user };
   res.render("urls_show", templateVars);
 });
 
@@ -99,9 +105,8 @@ app.post("/register", (req, res) => {
   const id = generateRandomString();
   const email = req.body.email;
   const password = req.body.password; 
-  const user = {id, email, password};
-  users[id] = user;
-  res.cookie("user_id", user)
+  users[id] = {id: id, email: email, password: password};
+  res.cookie("user_id", id)
   res.redirect(`/urls`);
 });
 
