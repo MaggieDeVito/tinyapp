@@ -25,6 +25,15 @@ const users = {
     password: "dishwasher-funk"
   }
 };
+
+const check = function(users, userEmail) {
+  for(let keys in users){
+    if(users[keys].email === userEmail) {
+      return true;
+    }
+  }
+}
+
 const getUsers = function(users, user_id) {
   return users[user_id];
 }
@@ -33,17 +42,17 @@ const generateRandomString = function(length = 6) {
   return Math.random().toString(20).substr(2, length);
 };
 
-app.get("/", (req, res) => {
-  res.send("Hello!");
-});
+// app.get("/", (req, res) => {
+//   res.send("Hello!");
+// });
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
+// app.get("/urls.json", (req, res) => {
+//   res.json(urlDatabase);
+// });
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
+// app.get("/hello", (req, res) => {
+//   res.send("<html><body>Hello <b>World</b></body></html>\n");
+// });
 
 app.get("/urls", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
@@ -107,8 +116,10 @@ app.post("/register", (req, res) => {
   const password = req.body.password; 
   users[id] = {id: id, email: email, password: password};
   res.cookie("user_id", id)
-
   if(email === "" || password === "") {
+    res.sendStatus(404);
+  }
+  if(check(users, users[id].email)) {
     res.sendStatus(404);
   }
   res.redirect(`/urls`);
@@ -120,3 +131,5 @@ app.post("/register", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+console.log(users);
