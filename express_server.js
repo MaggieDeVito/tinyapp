@@ -81,6 +81,10 @@ app.get("/register", (req, res) => {
   res.render("urls_regs")
 })
 
+app.get("/login", (req, res) => {
+  res.render("urls_login")
+})
+
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   urlDatabase[shortURL] = req.body.longURL;
@@ -131,5 +135,3 @@ app.post("/register", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-
-console.log(users);
