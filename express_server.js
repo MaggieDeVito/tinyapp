@@ -107,6 +107,10 @@ app.post("/register", (req, res) => {
   const password = req.body.password; 
   users[id] = {id: id, email: email, password: password};
   res.cookie("user_id", id)
+
+  if(email === "" || password === "") {
+    res.sendStatus(404);
+  }
   res.redirect(`/urls`);
 });
 
