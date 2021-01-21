@@ -62,7 +62,7 @@ app.get("/urls", (req, res) => {
     loggedIn = urlsForUser(urlDatabase, user.id)
   }
   if(!loggedIn) {
-    return res.redirect("/login");
+    return res.status(401).send("You do not have access")
   }
   if(loggedIn) {
   const templateVars = { urls: loggedIn, user: user }; 
@@ -73,7 +73,7 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
   if(!user) {
-    res.redirect("/login")
+    return res.status(401).send("You do not have access")
   }
   const templateVars = { user: user };
   res.render("urls_new", templateVars); //adds the template from urls_new to the page plus the template vars
@@ -87,7 +87,7 @@ app.get("/u/:shortURL", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
   if (!user) {
-    return res.redirect("/login")
+    return res.status(401).send("You do not have access")
   } 
   const allUsersURLs = urlsForUser(urlDatabase, user.id);
 if(Object.keys(allUsersURLs).length >= 0) {
@@ -96,7 +96,7 @@ if(Object.keys(allUsersURLs).length >= 0) {
       const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user };
       res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
     } else {
-      res.sendStatus(404);
+      return res.status(401).send("You do not have access")
     }
   } 
 }
@@ -122,7 +122,7 @@ app.post("/urls/:id", (req, res) => {
   const newLongURL = req.body.longURL;
   const user = getUsers(users, req.cookies["user_id"]);
   if (!user) {
-    return res.redirect("/login")
+    return res.status(401).send("You do not have access")
   }   
   const usersURLs = urlsForUser(urlDatabase, user.id);
   if(Object.keys(usersURLs).length >= 0) { 
@@ -139,7 +139,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   const user = getUsers(users, req.cookies["user_id"]);
   if (!user) {
-    return res.redirect("/login")
+    return res.status(401).send("You do not have access")
   } 
   const usersURLs = urlsForUser(urlDatabase, user.id);
   if(Object.keys(usersURLs).length >= 0) { 
