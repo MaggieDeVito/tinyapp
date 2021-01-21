@@ -63,6 +63,9 @@ app.get("/urls", (req, res) => {
 
 app.get("/urls/new", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
+  if(!user) {
+    res.redirect("/login")
+  }
   const templateVars = { user: user };
   res.render("urls_new", templateVars); //adds the template from urls_new to the page plus the template vars
 });
