@@ -120,14 +120,36 @@ app.post("/urls", (req, res) => {
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
   const newLongURL = req.body.longURL;
+  const user = getUsers(users, req.cookies["user_id"]);
+  if (!user) {
+    return res.redirect("/login")
+  }   
+  const usersURLs = urlsForUser(urlDatabase, user.id);
+  if(Object.keys(usersURLs).length >= 0) { 
+    for(let url in usersURLs){
+    if (url === req.params.shortURL) {
   urlDatabase[id] = newLongURL; 
   res.redirect("/urls"); 
+    }
+  }
+}
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL];
-  res.redirect("/urls"); // redirects to urls after deleting a url from the page
+  const user = getUsers(users, req.cookies["user_id"]);
+  if (!user) {
+    return res.redirect("/login")
+  } 
+  const usersURLs = urlsForUser(urlDatabase, user.id);
+  if(Object.keys(usersURLs).length >= 0) { 
+    for(let url in usersURLs){
+    if (url === req.params.shortURL) {
+      delete urlDatabase[shortURL];
+      res.redirect("/urls"); // redirects to urls after deleting a url from the page
+    }
+  }
+  }
 });
 
 app.post("/register", (req, res) => {
