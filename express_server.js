@@ -9,8 +9,8 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
 const urlDatabase = { // object of urlDatabase
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b2xVn2: { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID"},
+  asm5xK: { longURL: "http://www.google.com", userID: "userRandomID" }
 };
 
 const users = { // object of users
@@ -42,18 +42,6 @@ const getUsers = function(users, user_id) {
 const generateRandomString = function(length = 6) { // function to make random string for urls
   return Math.random().toString(20).substr(2, length);
 };
-
-// app.get("/", (req, res) => {
-//   res.send("Hello!");
-// });
-
-// app.get("/urls.json", (req, res) => {
-//   res.json(urlDatabase);
-// });
-
-// app.get("/hello", (req, res) => {
-//   res.send("<html><body>Hello <b>World</b></body></html>\n");
-// });
 
 app.get("/urls", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
