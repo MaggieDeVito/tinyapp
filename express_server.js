@@ -29,11 +29,10 @@ const users = {
 const check = function(users, userEmail) {
   for(let keys in users){
     if(users[keys].email === userEmail) {
-      return true;
-    } else {
-      return false;
-    }
+      return users[keys];
+    } 
   }
+  return false;
 }
 
 const getUsers = function(users, user_id) {
@@ -106,20 +105,34 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
+app.post("/register", (req, res) => {
+  const id = generateRandomString();
+  const email = req.body.email;
+  const password = req.body.password; 
+  if(email === "" || password === "") {
+    res.sendStatus(404);
+  }
+  if(check(users, email)) {
+    res.sendStatus(404);
+  }
+  users[id] = {id: id, email: email, password: password};
+  res.cookie("user_id", id)
+  res.redirect(`/urls`);
+});
+
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  for(let keys in users){
-    const id = users[keys]
-    if(!check(users, email)) {
+  const user = check(users, email);
+  const id = user.id
+    if(!user) {
       res.sendStatus(403);
-    } else if(users[keys].password !== password){
+    } else if(user.password !== password){
       res.sendStatus(403)
     } else {
       res.cookie("user_id", id)
       res.redirect("/urls");
     }
-  }
 });
 
 app.post("/logout", (req, res) => {
@@ -127,20 +140,6 @@ app.post("/logout", (req, res) => {
   res.redirect("/urls");
 })
 
-app.post("/register", (req, res) => {
-  const id = generateRandomString();
-  const email = req.body.email;
-  const password = req.body.password; 
-  users[id] = {id: id, email: email, password: password};
-  res.cookie("user_id", id)
-  if(email === "" || password === "") {
-    res.sendStatus(404);
-  }
-  if(check(users, users[id].email)) {
-    res.sendStatus(404);
-  }
-  res.redirect(`/urls`);
-});
 
 
 
