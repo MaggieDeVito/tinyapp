@@ -36,9 +36,11 @@ const check = function(users, userEmail) { // function to check for users
 }
 
 const urlsForUser = function (urlDatabase, userID) {
+  let match = {};
   for (let keys in urlDatabase) {
     if(urlDatabase[keys].userID === userID) {
-      return urlDatabase[keys]
+      match[keys] = urlDatabase[keys]
+      return match;
     }
   }
   return false;
@@ -54,8 +56,19 @@ const generateRandomString = function(length = 6) { // function to make random s
 
 app.get("/urls", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
-  const templateVars = { urls: urlDatabase, user: user }; 
-  res.render("urls_index", templateVars); // adds the template from urls_index to the page plus the template vars
+  let loggedIn;
+  if (!user) {
+    loggedIn;
+  } else { 
+    loggedIn = urlsForUser(urlDatabase, user.id)
+  }
+  if(!loggedIn) {
+    return res.redirect("/login");
+  }
+  if(loggedIn) {
+  const templateVars = { urls: loggedIn, user: user }; 
+  return res.render("urls_index", templateVars); // adds the template from urls_index to the page plus the template vars
+  }
 });
 
 app.get("/urls/new", (req, res) => {
