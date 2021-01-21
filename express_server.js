@@ -40,10 +40,9 @@ const urlsForUser = function (urlDatabase, userID) {
   for (let keys in urlDatabase) {
     if(urlDatabase[keys].userID === userID) {
       match[keys] = urlDatabase[keys]
-      return match;
     }
   }
-  return false;
+  return match;
 }
 
 const getUsers = function(users, user_id) { 
@@ -87,8 +86,21 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user };
-  res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
+  if (!user) {
+    return res.redirect("/login")
+  } 
+  const allUsersURLs = urlsForUser(urlDatabase, user.id);
+if(Object.keys(allUsersURLs).length >= 0) {
+  for(let url in allUsersURLs) {
+    if (url === req.params.shortURL) {
+      const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user };
+      res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
+    } else {
+      res.sendStatus(404);
+    }
+  } 
+}
+
 });
 
 app.get("/register", (req, res) => {
