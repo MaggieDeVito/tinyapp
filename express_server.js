@@ -10,7 +10,7 @@ app.use(cookieParser());
 
 const urlDatabase = { // object of urlDatabase
   b2xVn2: { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID"},
-  asm5xK: { longURL: "http://www.google.com", userID: "userRandomID" }
+  asm5xK: { longURL: "http://www.google.com", userID: "user2RandomID" }
 };
 
 const users = { // object of users
@@ -31,6 +31,15 @@ const check = function(users, userEmail) { // function to check for users
     if(users[keys].email === userEmail) {
       return users[keys];
     } 
+  }
+  return false;
+}
+
+const urlsForUser = function (urlDatabase, userID) {
+  for (let keys in urlDatabase) {
+    if(urlDatabase[keys].userID === userID) {
+      return urlDatabase[keys]
+    }
   }
   return false;
 }
@@ -59,13 +68,13 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL); // redirects them to the proper url
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const user = getUsers(users, req.cookies["user_id"]);
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: user };
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user };
   res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
 });
 
