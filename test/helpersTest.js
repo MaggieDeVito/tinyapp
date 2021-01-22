@@ -15,10 +15,16 @@ const testUsers = {
   }
 };
 
+
 describe('getUserByEmail', function() {
   it('should return a user with valid email', function() {
     const user = getUsersByEmail(testUsers, "user@example.com")
     const expectedOutput = "userRandomID";
-    assert.deepEqual({ user: 'userRandomID' }, { user: 'userRandomID' });
+    assert.deepEqual('userRandomID', expectedOutput);
+  });
+  it('should return a user with valid email', function() {
+    const user = getUsersByEmail(testUsers, "user3@example.com")
+    const expectedOutput = undefined;
+    assert.deepEqual(undefined, expectedOutput);
   });
 });
