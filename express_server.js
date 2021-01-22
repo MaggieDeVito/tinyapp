@@ -3,7 +3,6 @@ const app = express(); // assigning function to variable app
 const PORT = 8080; // port to use
 const cookieParser = require('cookie-parser'); // requiring cookie parser
 const bodyParser = require("body-parser"); // requiring body parser
-const bcrypt = require('bcrypt');
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -18,7 +17,7 @@ const users = { // object of users
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "test"
+    password: "purple-monkey-dinosaur"
   },
  "user2RandomID": {
     id: "user2RandomID", 
@@ -33,20 +32,17 @@ const check = function(users, userEmail) { // function to check for users
       return users[keys];
     } 
   }
-};
+  return false;
+}
 
-const urlsForUser = function (urlDatabase, userID) {
+const urlsForUser = function (database, ID) {
   let match = {};
-  for (let keys in urlDatabase) {
-    if(urlDatabase[keys].userID === userID) {
-      match[keys] = urlDatabase[keys]
+  for (let keys in database) {
+    if(database[keys].userID === ID) {
+      match[keys] = database[keys]
     }
   }
   return match;
-}
-
-const getUsers = function(users, user_id) { 
-  return users[user_id];
 }
 
 const generateRandomString = function(length = 6) { // function to make random string for urls
@@ -54,29 +50,23 @@ const generateRandomString = function(length = 6) { // function to make random s
 };
 
 app.get("/urls", (req, res) => {
-  const user = getUsers(users, req.cookies["user_id"]);
-  let loggedIn;
-  if (!user) {
-    loggedIn;
-  } else { 
-    loggedIn = urlsForUser(urlDatabase, user.id)
-  }
-  if(!loggedIn) {
-    return res.status(401).send("You do not have access")
-  }
-  if(loggedIn) {
-  const templateVars = { urls: loggedIn, user: user }; 
-  return res.render("urls_index", templateVars); // adds the template from urls_index to the page plus the template vars
+  const user = users[req.cookies["user_id"]]
+  if (user) {
+    let loggedIn = urlsForUser(urlDatabase, req.cookies["user_id"])
+    const templateVars = { urls: loggedIn, user: user }; 
+    return res.render("urls_index", templateVars); // adds the template from urls_index to the page plus the template vars
+  } else if (!req.cookies["user_id"]) {
+    return res.redirect("/login")
   }
 });
 
 app.get("/urls/new", (req, res) => {
-  const user = getUsers(users, req.cookies["user_id"]);
-  if(!user) {
-    return res.status(401).send("You do not have access")
+  const user = users[req.cookies["user_id"]];
+  if(req.cookies["user_id"]) {
+    const templateVars = { user: user };
+    res.render("urls_new", templateVars); //adds the template from urls_new to the page plus the template vars
   }
-  const templateVars = { user: user };
-  res.render("urls_new", templateVars); //adds the template from urls_new to the page plus the template vars
+  return res.redirect("/login");
 });
 
 app.get("/u/:shortURL", (req, res) => {
@@ -85,22 +75,16 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const user = getUsers(users, req.cookies["user_id"]);
-  if (!user) {
-    return res.status(401).send("You do not have access")
-  } 
-  const allUsersURLs = urlsForUser(urlDatabase, user.id);
-if(Object.keys(allUsersURLs).length >= 0) {
-  for(let url in allUsersURLs) {
-    if (url === req.params.shortURL) {
-      const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user };
-      res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
-    } else {
-      return res.status(401).send("You do not have access")
-    }
-  } 
-}
+  const userID = req.cookies["user_id"];
 
+  if(!userID) {
+    res.status(403).send("not logged in")
+  } else if(Object.keys(urlsForUser(urlDatabase, userID)).includes(req.params.shortURL)) {
+          const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: users[userID] };
+          res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
+  } else {
+    res.status(403).send("no access")
+  }
 });
 
 app.get("/register", (req, res) => {
@@ -113,60 +97,47 @@ app.get("/login", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL;
+  urlDatabase[shortURL] = { longURL: req.body.longURL, userID: req.cookies["user_id"] }
   res.redirect(`/urls/${shortURL}`); // directs you to urls with the proper short url
 });
 
-app.post("/urls/:id", (req, res) => {
-  const id = req.params.id;
-  const newLongURL = req.body.longURL;
-  const user = getUsers(users, req.cookies["user_id"]);
-  if (!user) {
-    return res.status(401).send("You do not have access")
-  }   
-  const usersURLs = urlsForUser(urlDatabase, user.id);
-  if(Object.keys(usersURLs).length >= 0) { 
-    for(let url in usersURLs){
-    if (url === req.params.shortURL) {
-  urlDatabase[id] = newLongURL; 
-  res.redirect("/urls"); 
-    }
+app.post("/urls/:shortURL", (req, res) => {
+  const userID = req.cookies["user_id"];
+  const shortURL = req.params.shortURL;
+  if(!req.cookies["user_id"]) {
+    res.status(403).send("not logged in")
+  } else if (Object.keys(urlsForUser(urlDatabase, userID)).includes(req.params.shortURL)) {
+    urlDatabase[shortURL].longURL = req.body.longURL;
+    res.redirect("/urls")
+  } else {
+    res.status(404).send("invalid user");
   }
-}
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
-  const user = getUsers(users, req.cookies["user_id"]);
-  if (!user) {
-    return res.status(401).send("You do not have access")
-  } 
-  const usersURLs = urlsForUser(urlDatabase, user.id);
-  if(Object.keys(usersURLs).length >= 0) { 
-    for(let url in usersURLs){
-    if (url === req.params.shortURL) {
+  const userID = req.cookies["user_id"];
+  if (!req.cookies["user_id"]) {
+    return res.status(401).send("You do not have access to delete, please log in")
+  } else if (Object.keys(urlsForUser(urlDatabase, userID)).includes(req.params.shortURL)) { 
       delete urlDatabase[shortURL];
       res.redirect("/urls"); // redirects to urls after deleting a url from the page
+    } else {
+      res.status(401).send("no access")
     }
-  }
-  }
 });
 
 app.post("/register", (req, res) => {
   const id = generateRandomString();
   const email = req.body.email;
   const password = req.body.password; 
-  const hashedPassword = bcrypt.hashSync(password, 10)
-  if(!email|| !password) { // checking if email or password are empty
-    res.sendStatus(404);
-    return; // sends them not found status code
+  if(email === "" || password === "") { // checking if email or password are empty
+    res.status(404).send("invalid input"); // sends them not found status code
   }
-  const user = check(users, email)
-  if(user) { // checks if email already exists
-    res.sendStatus(404); // sends them not found status code
-    return;
+  if(check(users, email)) { // checks if email already exists
+    res.status(404).send("account already exists, please log in"); // sends them not found status code
   }
-  users[id] = {id: id, email: email, password: hashedPassword}; // creates new user if both previous conditionals are false
+  users[id] = {id: id, email: email, password: password}; // creates new user if both previous conditionals are false
   res.cookie("user_id", id) // created the cookie
   res.redirect(`/urls`); // redirects back to urls
 });
@@ -175,21 +146,16 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = check(users, email);
-  const hashedPassword = bcrypt.hashSync(password, 10)
   const id = user.id
-  if(!user) { // checks if user doesnt exist
-    res.sendStatus(403);
-    return; // sends status code forbidden
-  } 
-  const goodPassword = bcrypt.compareSync(password, user.password);// checks if user password matches
-  if (!goodPassword) {
-    res.sendStatus(403) // sends status code forbidden
-    return;
-  }
-  res.cookie("user_id", id) // adds cookie
-  res.redirect("/urls"); // redirects to urls
+    if(!user) { // checks if user doesnt exist
+      res.status(403).send("no user exists, please register"); // sends status code forbidden
+    } else if(user.password !== password){ // checks if user password matches
+      res.status(403).send("invalid password") // sends status code forbidden
+    } else {
+      res.cookie("user_id", id) // adds cookie
+      res.redirect("/urls"); // redirects to urls
+    }
 });
-
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id"); // clears cookie when logging out
