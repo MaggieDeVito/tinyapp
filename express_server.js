@@ -4,6 +4,7 @@ const PORT = 8080; // port to use
 const bodyParser = require("body-parser"); // requiring body parser
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session')
+const { getUsersByEmail } = require('./helpers.js');
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -30,14 +31,6 @@ const users = { // object of users
   }
 };
 
-const check = function(users, userEmail) { // function to check for users 
-  for(let keys in users){
-    if(users[keys].email === userEmail) {
-      return users[keys];
-    } 
-  }
-  return false;
-}
 
 const urlsForUser = function (database, ID) {
   let match = {};
@@ -139,7 +132,7 @@ app.post("/register", (req, res) => {
   if(email === "" || password === "") { // checking if email or password are empty
     return res.status(404).send("invalid input"); // sends them not found status code
   }
-  if(check(users, email)) { // checks if email already exists
+  if(getUsersByEmail(users, email)) { // checks if email already exists
     return res.status(404).send("account already exists, please log in"); // sends them not found status code
   }
   users[id] = {id: id, email: email, password: hashedPassword}; // creates new user if both previous conditionals are false
@@ -150,7 +143,7 @@ app.post("/register", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = check(users, email);
+  const user = getUsersByEmail(users, email);
   const id = user.id
     if(!user) { // checks if user doesnt exist
       res.status(403).send("no user exists, please register"); // sends status code forbidden
