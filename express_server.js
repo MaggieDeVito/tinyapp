@@ -5,6 +5,7 @@ const bodyParser = require("body-parser"); // requiring body parser
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session')
 const { getUsersByEmail } = require('./helpers.js');
+const { urlsForUser } = require('./helpers.js')
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -30,17 +31,6 @@ const users = { // object of users
     password: "test2"
   }
 };
-
-
-const urlsForUser = function (database, ID) {
-  let match = {};
-  for (let keys in database) {
-    if(database[keys].userID === ID) {
-      match[keys] = database[keys]
-    }
-  }
-  return match;
-}
 
 const generateRandomString = function(length = 6) { // function to make random string for urls
   return Math.random().toString(20).substr(2, length);
