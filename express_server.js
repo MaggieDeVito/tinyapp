@@ -1,13 +1,16 @@
 const express = require("express"); // requiring express
 const app = express(); // assigning function to variable app
 const PORT = 8080; // port to use
-const cookieParser = require('cookie-parser'); // requiring cookie parser
 const bodyParser = require("body-parser"); // requiring body parser
 const bcrypt = require('bcrypt');
+const cookieSession = require('cookie-session')
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1']
+}))
 
 const urlDatabase = { // object of urlDatabase
   b2xVn2: { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID"},
@@ -18,12 +21,12 @@ const users = { // object of users
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    password: "test1"
   },
  "user2RandomID": {
     id: "user2RandomID", 
     email: "user2@example.com", 
-    password: "dishwasher-funk"
+    password: "test2"
   }
 };
 
@@ -51,21 +54,21 @@ const generateRandomString = function(length = 6) { // function to make random s
 };
 
 app.get("/urls", (req, res) => {
-  const user = users[req.cookies["user_id"]]
+  const user = users[req.session.user_id]
   if (user) {
-    let loggedIn = urlsForUser(urlDatabase, req.cookies["user_id"])
+    let loggedIn = urlsForUser(urlDatabase, req.session.user_id)
     const templateVars = { urls: loggedIn, user: user }; 
     return res.render("urls_index", templateVars); // adds the template from urls_index to the page plus the template vars
-  } else if (!req.cookies["user_id"]) {
-    return res.redirect("/login")
+  } else if (!req.session.user_id) {
+    res.redirect("/login")
   }
 });
 
 app.get("/urls/new", (req, res) => {
-  const user = users[req.cookies["user_id"]];
-  if(req.cookies["user_id"]) {
+  const user = users[req.session.user_id];
+  if(req.session.user_id) {
     const templateVars = { user: user };
-    res.render("urls_new", templateVars); //adds the template from urls_new to the page plus the template vars
+    return res.render("urls_new", templateVars); //adds the template from urls_new to the page plus the template vars
   }
   return res.redirect("/login");
 });
@@ -76,13 +79,13 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
 
   if(!userID) {
     res.status(403).send("not logged in")
   } else if(Object.keys(urlsForUser(urlDatabase, userID)).includes(req.params.shortURL)) {
           const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: users[userID] };
-          res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
+          return res.render("urls_show", templateVars); // adds the template from urls_show to the page plus the template vars
   } else {
     res.status(403).send("no access")
   }
@@ -98,18 +101,18 @@ app.get("/login", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = { longURL: req.body.longURL, userID: req.cookies["user_id"] }
+  urlDatabase[shortURL] = { longURL: req.body.longURL, userID: req.session.user_id }
   res.redirect(`/urls/${shortURL}`); // directs you to urls with the proper short url
 });
 
 app.post("/urls/:shortURL", (req, res) => {
-  const userID = req.cookies["user_id"];
+  const userID = req.session.user_id;
   const shortURL = req.params.shortURL;
-  if(!req.cookies["user_id"]) {
+  if(!req.session.user_id) {
     res.status(403).send("not logged in")
   } else if (Object.keys(urlsForUser(urlDatabase, userID)).includes(req.params.shortURL)) {
     urlDatabase[shortURL].longURL = req.body.longURL;
-    res.redirect("/urls")
+    return res.redirect("/urls")
   } else {
     res.status(404).send("invalid user");
   }
@@ -117,12 +120,12 @@ app.post("/urls/:shortURL", (req, res) => {
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
-  const userID = req.cookies["user_id"];
-  if (!req.cookies["user_id"]) {
+  const userID = req.session.user_id;
+  if (!req.session.user_id) {
     return res.status(401).send("You do not have access to delete, please log in")
   } else if (Object.keys(urlsForUser(urlDatabase, userID)).includes(req.params.shortURL)) { 
       delete urlDatabase[shortURL];
-      res.redirect("/urls"); // redirects to urls after deleting a url from the page
+      return res.redirect("/urls"); // redirects to urls after deleting a url from the page
     } else {
       res.status(401).send("no access")
     }
@@ -140,29 +143,27 @@ app.post("/register", (req, res) => {
     return res.status(404).send("account already exists, please log in"); // sends them not found status code
   }
   users[id] = {id: id, email: email, password: hashedPassword}; // creates new user if both previous conditionals are false
-  res.cookie("user_id", id) // created the cookie
-  res.redirect(`/urls`); // redirects back to urls
+  req.session.user_id = id
+  return res.redirect(`/urls`); // redirects back to urls
 });
 
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = check(users, email);
-  console.log(password)
-  console.log(user);
   const id = user.id
     if(!user) { // checks if user doesnt exist
       res.status(403).send("no user exists, please register"); // sends status code forbidden
     } else if(!bcrypt.compareSync(password, user.password)){ // checks if user password matches
       res.status(403).send("invalid password") // sends status code forbidden
     } else {
-      res.cookie("user_id", id) // adds cookie
-      res.redirect("/urls"); // redirects to urls
+      req.session.user_id = id;
+      return res.redirect("/urls"); // redirects to urls
     }
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id"); // clears cookie when logging out
+  req.session = null; // clears cookie when logging out
   res.redirect("/urls"); // redirects to urls
 })
 
