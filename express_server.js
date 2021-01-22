@@ -3,6 +3,7 @@ const app = express(); // assigning function to variable app
 const PORT = 8080; // port to use
 const cookieParser = require('cookie-parser'); // requiring cookie parser
 const bodyParser = require("body-parser"); // requiring body parser
+const bcrypt = require('bcrypt');
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -17,7 +18,7 @@ const users = { // object of users
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    password: "test"
   },
  "user2RandomID": {
     id: "user2RandomID", 
@@ -32,8 +33,7 @@ const check = function(users, userEmail) { // function to check for users
       return users[keys];
     } 
   }
-  return false;
-}
+};
 
 const urlsForUser = function (urlDatabase, userID) {
   let match = {};
@@ -156,13 +156,17 @@ app.post("/register", (req, res) => {
   const id = generateRandomString();
   const email = req.body.email;
   const password = req.body.password; 
-  if(email === "" || password === "") { // checking if email or password are empty
-    res.sendStatus(404); // sends them not found status code
+  const hashedPassword = bcrypt.hashSync(password, 10)
+  if(!email|| !password) { // checking if email or password are empty
+    res.sendStatus(404);
+    return; // sends them not found status code
   }
-  if(check(users, email)) { // checks if email already exists
+  const user = check(users, email)
+  if(user) { // checks if email already exists
     res.sendStatus(404); // sends them not found status code
+    return;
   }
-  users[id] = {id: id, email: email, password: password}; // creates new user if both previous conditionals are false
+  users[id] = {id: id, email: email, password: hashedPassword}; // creates new user if both previous conditionals are false
   res.cookie("user_id", id) // created the cookie
   res.redirect(`/urls`); // redirects back to urls
 });
@@ -171,16 +175,21 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = check(users, email);
+  const hashedPassword = bcrypt.hashSync(password, 10)
   const id = user.id
-    if(!user) { // checks if user doesnt exist
-      res.sendStatus(403); // sends status code forbidden
-    } else if(user.password !== password){ // checks if user password matches
-      res.sendStatus(403) // sends status code forbidden
-    } else {
-      res.cookie("user_id", id) // adds cookie
-      res.redirect("/urls"); // redirects to urls
-    }
+  if(!user) { // checks if user doesnt exist
+    res.sendStatus(403);
+    return; // sends status code forbidden
+  } 
+  const goodPassword = bcrypt.compareSync(password, user.password);// checks if user password matches
+  if (!goodPassword) {
+    res.sendStatus(403) // sends status code forbidden
+    return;
+  }
+  res.cookie("user_id", id) // adds cookie
+  res.redirect("/urls"); // redirects to urls
 });
+
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id"); // clears cookie when logging out
