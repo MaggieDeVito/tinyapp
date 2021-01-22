@@ -3,6 +3,7 @@ const app = express(); // assigning function to variable app
 const PORT = 8080; // port to use
 const cookieParser = require('cookie-parser'); // requiring cookie parser
 const bodyParser = require("body-parser"); // requiring body parser
+const bcrypt = require('bcrypt');
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -131,13 +132,14 @@ app.post("/register", (req, res) => {
   const id = generateRandomString();
   const email = req.body.email;
   const password = req.body.password; 
+  const hashedPassword = bcrypt.hashSync(password, 10);
   if(email === "" || password === "") { // checking if email or password are empty
-    res.status(404).send("invalid input"); // sends them not found status code
+    return res.status(404).send("invalid input"); // sends them not found status code
   }
   if(check(users, email)) { // checks if email already exists
-    res.status(404).send("account already exists, please log in"); // sends them not found status code
+    return res.status(404).send("account already exists, please log in"); // sends them not found status code
   }
-  users[id] = {id: id, email: email, password: password}; // creates new user if both previous conditionals are false
+  users[id] = {id: id, email: email, password: hashedPassword}; // creates new user if both previous conditionals are false
   res.cookie("user_id", id) // created the cookie
   res.redirect(`/urls`); // redirects back to urls
 });
@@ -146,10 +148,12 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = check(users, email);
+  console.log(password)
+  console.log(user);
   const id = user.id
     if(!user) { // checks if user doesnt exist
       res.status(403).send("no user exists, please register"); // sends status code forbidden
-    } else if(user.password !== password){ // checks if user password matches
+    } else if(!bcrypt.compareSync(password, user.password)){ // checks if user password matches
       res.status(403).send("invalid password") // sends status code forbidden
     } else {
       res.cookie("user_id", id) // adds cookie
